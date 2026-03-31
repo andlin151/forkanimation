@@ -1,0 +1,1051 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Ubuntu+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+  <title>fork() — Animacion de procesos</title>
+
+  <style>
+    /* ========================================
+       reset y base
+       ======================================== */
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Ubuntu Mono', monospace;
+      background: #002b36;
+      color: #839496;
+      min-height: 100vh;
+    }
+
+    h1 {
+      text-align: center;
+      padding: 14px;
+      font-size: 1.3em;
+      color: #cb4b16;
+    }
+
+    /* ========================================
+       controles
+       ======================================== */
+
+    #controles {
+      text-align: center;
+      padding: 6px;
+      position: sticky;
+      top: 0;
+      background: #002b36;
+      z-index: 100;
+      border-bottom: 1px solid #073642;
+    }
+
+    #controles button {
+      background: #cb4b16;
+      color: #fdf6e3;
+      border: none;
+      padding: 8px 20px;
+      margin: 0 4px;
+      font-size: 0.9em;
+      border-radius: 6px;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    #controles button:hover {
+      background: #dc322f;
+    }
+
+    #controles button:disabled {
+      background: #073642;
+      color: #586e75;
+      cursor: default;
+    }
+
+    #controles button.activo {
+      background: #859900;
+    }
+
+    #velocidad {
+      display: inline-block;
+      margin-left: 12px;
+      color: #586e75;
+      font-size: 0.82em;
+      vertical-align: middle;
+    }
+
+    #velocidad input {
+      width: 90px;
+      vertical-align: middle;
+      cursor: pointer;
+    }
+
+    #velocidad span {
+      color: #cb4b16;
+    }
+
+    #info-paso {
+      text-align: center;
+      padding: 10px 20px;
+      font-size: 0.92em;
+      color: #93a1a1;
+      min-height: 2.4em;
+      max-width: 820px;
+      margin: 0 auto;
+      line-height: 1.4;
+    }
+
+    /* ========================================
+       layout: globo izq | arbol centro | globo der
+       ======================================== */
+
+    #escena {
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      width: 100%;
+      padding: 10px 10px 20px;
+      gap: 0;
+    }
+
+    #col-izq,
+    #col-der {
+      flex: 0 0 320px;
+      min-height: 100px;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      padding-top: 40px;
+    }
+
+    #col-izq { align-items: flex-end; }
+    #col-der { align-items: flex-start; }
+
+    #col-centro {
+      flex: 0 0 200px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 0 10px;
+    }
+
+    /* ========================================
+       nodos del arbol (circulos)
+       ======================================== */
+
+    .nodo {
+      background: #073642;
+      border: 2px solid #586e75;
+      border-radius: 50%;
+      padding: 12px 10px;
+      text-align: center;
+      width: 95px;
+      height: 95px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.4s;
+    }
+
+    .nodo .nn {
+      font-weight: bold;
+      font-size: 0.82em;
+      color: #93a1a1;
+      line-height: 1.2;
+    }
+
+    .nodo .np {
+      font-size: 0.7em;
+      color: #586e75;
+    }
+
+    .nodo.destacado {
+      border-color: #dc322f;
+      box-shadow: 0 0 14px #dc322f44;
+    }
+
+    .nodo.destacado-hijo {
+      border-color: #268bd2;
+      box-shadow: 0 0 14px #268bd244;
+    }
+
+    .nodo.apagado       { opacity: 0.3; }
+    .nodo.esperando-nodo { opacity: 0.5; border-style: dashed; }
+    .nodo.terminado-nodo { opacity: 0.25; border-style: dotted; }
+
+    .conector {
+      width: 2px;
+      height: 22px;
+      background: #586e75;
+    }
+
+    /* ========================================
+       globos de dialogo
+       ======================================== */
+
+    .proceso {
+      background: #073642;
+      border: 2px solid #586e75;
+      border-radius: 18px;
+      padding: 12px;
+      width: 310px;
+      position: relative;
+      transition: opacity 0.4s;
+    }
+
+    .proceso.padre-proc { border-color: #dc322f; }
+    .proceso.hijo-proc  { border-color: #268bd2; }
+
+    /* colita (elemento real, posicionada con js) */
+
+    .colita {
+      position: absolute;
+      width: 0;
+      height: 0;
+    }
+
+    .colita-der {
+      right: -16px;
+      border-top: 12px solid transparent;
+      border-bottom: 12px solid transparent;
+      border-left: 16px solid #dc322f;
+    }
+
+    .colita-der-inner {
+      right: -11px;
+      border-top: 10px solid transparent;
+      border-bottom: 10px solid transparent;
+      border-left: 12px solid #073642;
+    }
+
+    .colita-izq {
+      left: -16px;
+      border-top: 12px solid transparent;
+      border-bottom: 12px solid transparent;
+      border-right: 16px solid #268bd2;
+    }
+
+    .colita-izq-inner {
+      left: -11px;
+      border-top: 10px solid transparent;
+      border-bottom: 10px solid transparent;
+      border-right: 12px solid #073642;
+    }
+
+    /* titulo del globo */
+
+    .proceso-titulo {
+      font-weight: bold;
+      font-size: 0.95em;
+      margin-bottom: 5px;
+      padding-bottom: 4px;
+      border-bottom: 1px solid #586e75;
+    }
+
+    .padre-proc .proceso-titulo { color: #dc322f; }
+    .hijo-proc  .proceso-titulo { color: #268bd2; }
+
+    /* lineas de codigo dentro del globo */
+
+    .linea-codigo {
+      padding: 2px 6px;
+      margin: 1px 0;
+      border-radius: 4px;
+      font-size: 0.75em;
+      white-space: pre;
+      color: #586e75;
+      line-height: 1.45;
+    }
+
+    .linea-codigo.activa {
+      background: #dc322f22;
+      color: #fdf6e3;
+      font-weight: bold;
+    }
+
+    .hijo-proc .linea-codigo.activa {
+      background: #268bd222;
+    }
+
+    .linea-codigo.ejecutada {
+      color: #657b83;
+    }
+
+    .linea-codigo.no-aplica {
+      color: #073642;
+      text-decoration: line-through;
+    }
+
+    /* variables */
+
+    .variables {
+      margin-top: 6px;
+      padding: 6px 8px;
+      background: #002b36;
+      border-radius: 6px;
+      font-size: 0.78em;
+    }
+
+    .variables .tv {
+      color: #586e75;
+      font-size: 0.72em;
+      margin-bottom: 2px;
+    }
+
+    .vv.cambiado {
+      color: #b58900;
+      font-weight: bold;
+    }
+
+    /* estados del globo */
+
+    .proceso.esperando {
+      opacity: 0.4;
+    }
+
+    .proceso.esperando .proceso-titulo::after {
+      content: ' zzz';
+      font-size: 0.7em;
+      color: #586e75;
+    }
+
+    .proceso.terminado {
+      opacity: 0.25;
+    }
+
+    .proceso.terminado .proceso-titulo::after {
+      content: ' [fin]';
+      font-size: 0.7em;
+      color: #586e75;
+    }
+
+    /* ========================================
+       consola
+       ======================================== */
+
+    #consola {
+      max-width: 740px;
+      width: 90%;
+      margin: 10px auto 24px;
+      background: #073642;
+      border: 1px solid #586e75;
+      border-radius: 8px;
+      padding: 10px 14px;
+      min-height: 50px;
+    }
+
+    .tc {
+      color: #586e75;
+      font-size: 0.75em;
+      margin-bottom: 4px;
+    }
+
+    .sl {
+      font-size: 0.8em;
+      line-height: 1.6;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .padre-out { color: #dc322f; }
+    .hijo-out  { color: #268bd2; }
+    .comun-out { color: #93a1a1; }
+    .shell-out { color: #859900; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-3px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ========================================
+       modal (ver programa)
+       ======================================== */
+
+    #modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: #002b36dd;
+      z-index: 200;
+      justify-content: center;
+      align-items: center;
+    }
+
+    #modal-overlay.visible {
+      display: flex;
+    }
+
+    #modal-box {
+      background: #073642;
+      border: 2px solid #586e75;
+      border-radius: 12px;
+      padding: 20px 24px;
+      max-width: 680px;
+      width: 90%;
+      max-height: 80vh;
+      overflow-y: auto;
+      position: relative;
+    }
+
+    #modal-box h2 {
+      color: #b58900;
+      font-size: 1.1em;
+      margin-bottom: 12px;
+    }
+
+    #modal-box pre {
+      color: #93a1a1;
+      font-size: 0.88em;
+      line-height: 1.6;
+      white-space: pre;
+      overflow-x: auto;
+    }
+
+    #modal-box .linea-padre { color: #dc322f; }
+    #modal-box .linea-hijo  { color: #268bd2; }
+    #modal-box .linea-comun { color: #93a1a1; }
+    #modal-box .linea-incl  { color: #586e75; }
+
+    #modal-cerrar {
+      position: absolute;
+      top: 10px;
+      right: 14px;
+      background: none;
+      border: none;
+      color: #586e75;
+      font-size: 1.4em;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    #modal-cerrar:hover {
+      color: #93a1a1;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- ========================================
+       CABECERA Y controles
+       ======================================== -->
+
+  <h1>fork() — Como se bifurca un proceso</h1>
+
+  <div id="controles">
+    <button id="btn-ant" disabled>&#9664; Anterior</button>
+    <button id="btn-sig">Siguiente &#9654;</button>
+    <button id="btn-reset">Reiniciar</button>
+    <button id="btn-auto">&#9654;&#9654; Auto</button>
+    <button id="btn-ver" style="background:#268bd2">Ver programa</button>
+    <div id="velocidad">
+      <input type="range" id="rango-vel" min="500" max="4000" value="2000" step="250">
+      <span id="vel-texto">2.0s</span>
+    </div>
+  </div>
+
+  <div id="info-paso">Pulsa "Siguiente" o "Auto" para comenzar.</div>
+
+  <!-- ========================================
+       modal: codigo fuente
+       ======================================== -->
+
+  <div id="modal-overlay">
+    <div id="modal-box">
+      <button id="modal-cerrar">&times;</button>
+      <h2>procesos.c</h2>
+      <pre><span class="linea-incl">#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;unistd.h&gt;
+#include &lt;sys/wait.h&gt;</span>
+
+<span class="linea-comun">int main( ) {
+  int contador = 0;
+  pid_t pid;
+
+  printf( "Proceso inicial (%d): contador = %d\n", getpid( ), contador );
+
+  pid = fork( );</span>
+
+  if ( pid != 0 ) {
+    <span class="linea-padre">/* PADRE */
+    contador = contador + 10;
+    printf( "Padre (%d): contador = %d\n", getpid( ), contador );
+    printf( "Padre (%d): esperando al hijo...\n", getpid( ) );
+    waitpid( pid, NULL, 0 );
+    printf( "Padre (%d): el hijo termino. Fin.\n", getpid( ) );</span>
+  } else {
+    <span class="linea-hijo">/* HIJO */
+    contador = contador + 1;
+    printf( "Hijo (%d): contador = %d\n", getpid( ), contador );
+    printf( "Hijo (%d): haciendo mi trabajo...\n", getpid( ) );
+    contador = contador + 1;
+    printf( "Hijo (%d): contador = %d. Fin.\n", getpid( ), contador );</span>
+  }
+
+<span class="linea-comun">  exit( 0 );
+}</span></pre>
+    </div>
+  </div>
+
+  <!-- ========================================
+       escena: arbol + globos
+       ======================================== -->
+
+  <div id="escena">
+    <div id="col-izq"></div>
+    <div id="col-centro"></div>
+    <div id="col-der"></div>
+  </div>
+
+  <!-- ========================================
+       consola
+       ======================================== -->
+
+  <div id="consola">
+    <div class="tc">Terminal</div>
+    <div id="con-sal"></div>
+  </div>
+
+  <!-- ========================================
+       javascript
+       ======================================== -->
+
+  <script>
+    // ==========================================
+    // codigo fuente (representacion simplificada)
+    // ==========================================
+
+    const CF = [
+      { n: 1,  t: 'int contador = 0;',                 r: 'comun' },
+      { n: 2,  t: 'pid_t pid;',                        r: 'comun' },
+      { n: 3,  t: 'printf("Proceso inicial...");',      r: 'comun' },
+      { n: 4,  t: 'pid = fork();',                     r: 'comun' },
+      { n: 5,  t: 'contador = contador + 10;',          r: 'padre' },
+      { n: 6,  t: 'printf("Padre: contador=%d");',      r: 'padre' },
+      { n: 7,  t: 'printf("Padre: esperando...");',     r: 'padre' },
+      { n: 8,  t: 'waitpid(pid, NULL, 0);',             r: 'padre' },
+      { n: 9,  t: 'printf("Padre: hijo termino.");',    r: 'padre' },
+      { n: 10, t: 'contador = contador + 1;',           r: 'hijo'  },
+      { n: 11, t: 'printf("Hijo: contador=%d");',       r: 'hijo'  },
+      { n: 12, t: 'printf("Hijo: trabajando...");',     r: 'hijo'  },
+      { n: 13, t: 'contador = contador + 1;',           r: 'hijo'  },
+      { n: 14, t: 'printf("Hijo: contador=%d. Fin.");', r: 'hijo'  },
+      { n: 15, t: 'exit(0);',                          r: 'ambos' },
+    ];
+
+    // ==========================================
+    // pasos de la animacion
+    // ==========================================
+
+    const pasos = [
+
+      // --- arbol de procesos ---
+
+      {
+        t: 'a',
+        n: [{ id: 'init', s: '' }],
+        desc: 'Todo comienza con init (PID 1), el primer proceso del sistema.'
+      },
+      {
+        t: 'a',
+        n: [{ id: 'init', s: '' }, { id: 'bash', s: '' }],
+        desc: 'init lanza procesos. Entre ellos, bash (PID 500) donde trabajamos.'
+      },
+      {
+        t: 'a',
+        n: [{ id: 'init', s: 'apagado' }, { id: 'bash', s: '' }, { id: 'proc', s: 'destacado' }],
+        desc: 'Ejecutamos ./procesos (PID 1000).',
+        salida: { texto: '$ ./procesos', clase: 'shell-out' }
+      },
+      {
+        t: 'a',
+        n: [{ id: 'init', s: 'apagado' }, { id: 'bash', s: 'apagado' }, { id: 'proc', s: 'destacado' }],
+        desc: 'Veamos que pasa dentro del proceso 1000...'
+      },
+
+      // --- codigo unico (antes del fork) ---
+
+      {
+        t: 'c1', ln: 1,
+        v: { contador: 0, pid: '-' }, ps: 'destacado',
+        desc: 'Se declara contador = 0.'
+      },
+      {
+        t: 'c1', ln: 2,
+        v: { contador: 0, pid: '-' }, ps: 'destacado',
+        desc: 'Se declara pid.'
+      },
+      {
+        t: 'c1', ln: 3,
+        v: { contador: 0, pid: '-' }, ps: 'destacado',
+        desc: 'Se imprime el estado inicial.',
+        salida: { texto: 'Proceso inicial (1000): contador = 0', clase: 'comun-out' }
+      },
+      {
+        t: 'c1', ln: 4,
+        v: { contador: 0, pid: '-' }, ps: 'destacado',
+        desc: 'fork() crea una copia del proceso. Ahora hay DOS procesos.'
+      },
+
+      // --- codigo doble: ambos ejecutan en paralelo ---
+
+      {
+        t: 'c2', q: 'ambos', lP: 5, lH: 10,
+        vP: { contador: 10, pid: 1001 }, cP: 'contador',
+        vH: { contador: 1, pid: 0 },     cH: 'contador',
+        pS: 'destacado', hS: 'destacado-hijo',
+        desc: 'Ambos ejecutan a la vez. PADRE suma 10 a contador. HIJO suma 1 a su copia.'
+      },
+      {
+        t: 'c2', q: 'ambos', lP: 6, lH: 11,
+        vP: { contador: 10, pid: 1001 },
+        vH: { contador: 1, pid: 0 },
+        pS: 'destacado', hS: 'destacado-hijo',
+        desc: 'PADRE imprime contador=10. HIJO imprime contador=1. Son copias independientes.',
+        salida:  { texto: 'Padre (1000): contador = 10', clase: 'padre-out' },
+        salida2: { texto: 'Hijo (1001): contador = 1',   clase: 'hijo-out' }
+      },
+      {
+        t: 'c2', q: 'ambos', lP: 7, lH: 12,
+        vP: { contador: 10, pid: 1001 },
+        vH: { contador: 1, pid: 0 },
+        pS: 'destacado', hS: 'destacado-hijo',
+        desc: 'PADRE anuncia que va a esperar. HIJO sigue trabajando.',
+        salida:  { texto: 'Padre (1000): esperando al hijo...', clase: 'padre-out' },
+        salida2: { texto: 'Hijo (1001): haciendo mi trabajo...', clase: 'hijo-out' }
+      },
+      {
+        t: 'c2', q: 'espera', lP: 8, lH: 13,
+        vP: { contador: 10, pid: 1001 },
+        vH: { contador: 2, pid: 0 }, cH: 'contador',
+        pS: 'esperando', hS: 'destacado-hijo',
+        desc: 'PADRE se bloquea en waitpid(). HIJO suma 1 mas, contador=2.'
+      },
+      {
+        t: 'c2', q: 'hijo', lP: 8, lH: 14,
+        vP: { contador: 10, pid: 1001 },
+        vH: { contador: 2, pid: 0 },
+        pS: 'esperando', hS: 'destacado-hijo',
+        desc: 'HIJO imprime su contador final. Padre sigue bloqueado.',
+        salida: { texto: 'Hijo (1001): contador = 2. Fin.', clase: 'hijo-out' }
+      },
+      {
+        t: 'c2', q: 'hijo-fin', lP: 8, lH: 15,
+        vP: { contador: 10, pid: 1001 },
+        vH: { contador: 2, pid: 0 },
+        pS: 'esperando', hS: 'terminado',
+        desc: 'HIJO llama exit(0) y termina. El padre se desbloquea.'
+      },
+      {
+        t: 'c2', q: 'padre-vuelve', lP: 9, lH: null,
+        vP: { contador: 10, pid: 1001 },
+        vH: { contador: 2, pid: 0 },
+        pS: 'destacado', hS: 'terminado',
+        desc: 'PADRE: waitpid() retorna. El hijo ya no existe.',
+        salida: { texto: 'Padre (1000): el hijo termino. Fin.', clase: 'padre-out' }
+      },
+      {
+        t: 'c2', q: 'padre-fin', lP: 15, lH: null,
+        vP: { contador: 10, pid: 1001 },
+        vH: { contador: 2, pid: 0 },
+        pS: 'terminado', hS: 'terminado',
+        desc: 'PADRE llama exit(0). Programa terminado.'
+      },
+
+      // --- final ---
+
+      {
+        t: 'a',
+        n: [{ id: 'init', s: '' }, { id: 'bash', s: 'destacado' }],
+        desc: 'Ambos procesos terminaron. bash recupera el control.'
+      },
+    ];
+
+    // ==========================================
+    // estado global
+    // ==========================================
+
+    let pasoActual = -1;
+    let salidas = [];
+
+    const colI     = document.getElementById('col-izq');
+    const colC     = document.getElementById('col-centro');
+    const colD     = document.getElementById('col-der');
+    const conSal   = document.getElementById('con-sal');
+    const info     = document.getElementById('info-paso');
+    const btnSig   = document.getElementById('btn-sig');
+    const btnAnt   = document.getElementById('btn-ant');
+    const btnReset = document.getElementById('btn-reset');
+    const btnAuto  = document.getElementById('btn-auto');
+    const rangoVel = document.getElementById('rango-vel');
+    const velTexto = document.getElementById('vel-texto');
+
+    const nombres = { init: 'init', bash: 'bash', proc: './procesos' };
+    const pids    = { init: 1, bash: 500, proc: 1000 };
+
+    // ==========================================
+    // generadores de html
+    // ==========================================
+
+    function nodoHTML(nombre, pid, estado, domId) {
+      let lbl = nombre;
+      if (estado === 'esperando-nodo') lbl += ' (esperando)';
+      if (estado === 'terminado-nodo') lbl += ' (fin)';
+
+      let cls = 'nodo' + (estado ? ' ' + estado : '');
+      let idAttr = domId ? ' id="' + domId + '"' : '';
+
+      return '<div class="' + cls + '"' + idAttr + '>'
+        + '<div class="nn">' + lbl + '</div>'
+        + '<div class="np">PID ' + pid + '</div>'
+        + '</div>';
+    }
+
+    function globoHTML(id, titulo, clases) {
+      return '<div class="proceso ' + clases + '" id="' + id + '">'
+        + '<div class="proceso-titulo">' + titulo + '</div>'
+        + '<div id="' + id + '-cod"></div>'
+        + '<div class="variables" id="' + id + '-vars"></div>'
+        + '</div>';
+    }
+
+    // ==========================================
+    // alineacion de globos y colitas
+    // ==========================================
+
+    function alinearGlobo(globoId, nodoId, colId, lado) {
+      let globo = document.getElementById(globoId);
+      let nodo  = document.getElementById(nodoId);
+      let col   = document.getElementById(colId);
+      if (!globo || !nodo || !col) return;
+
+      let escena = document.getElementById('escena');
+      let escenaTop = escena.getBoundingClientRect().top;
+      let nodoCentroY = nodo.getBoundingClientRect().top + nodo.offsetHeight / 2 - escenaTop;
+
+      // alinear la columna para que la colita (a 40px del top) coincida con el nodo
+      let pt = nodoCentroY - 52;
+      if (pt < 0) pt = 0;
+      col.style.paddingTop = pt + 'px';
+
+      // colita exterior
+      let c1 = document.createElement('div');
+      c1.className = 'colita colita-' + lado;
+      c1.style.top = '40px';
+      globo.appendChild(c1);
+
+      // colita interior (relleno)
+      let c2 = document.createElement('div');
+      c2.className = 'colita colita-' + lado + '-inner';
+      c2.style.top = '42px';
+      globo.appendChild(c2);
+    }
+
+    // ==========================================
+    // llenar paneles de codigo
+    // ==========================================
+
+    function llenar(codId, varsId, lineas, activa, ejecutadas, noAplica, vars, cambiado) {
+      let cc = document.getElementById(codId);
+      let vc = document.getElementById(varsId);
+      if (!cc || !vc) return;
+
+      cc.innerHTML = '';
+      lineas.forEach(l => {
+        let cls = 'linea-codigo';
+        if (l.n === activa)              cls += ' activa';
+        else if (noAplica.includes(l.n)) cls += ' no-aplica';
+        else if (ejecutadas.includes(l.n)) cls += ' ejecutada';
+        cc.innerHTML += '<div class="' + cls + '">' + l.t + '</div>';
+      });
+
+      vc.innerHTML = '<div class="tv">variables:</div>';
+      for (const [k, v] of Object.entries(vars)) {
+        let clase = (k === cambiado) ? ' cambiado' : '';
+        vc.innerHTML += '<div class="vv' + clase + '">' + k + ' = ' + v + '</div>';
+      }
+    }
+
+    // ==========================================
+    // utilidades
+    // ==========================================
+
+    function getEj(idx) {
+      let c = [], p = [], h = [];
+      for (let i = 0; i <= idx; i++) {
+        let s = pasos[i];
+        if (s.t === 'c1' && s.ln) c.push(s.ln);
+        if (s.t === 'c2' && s.lP && s.q !== 'espera') p.push(s.lP);
+        if (s.t === 'c2' && s.lH) h.push(s.lH);
+      }
+      return { c, p, h };
+    }
+
+    function limpiar() {
+      colI.innerHTML = '';
+      colC.innerHTML = '';
+      colD.innerHTML = '';
+    }
+
+    function mapEstado(s) {
+      if (s === 'destacado')     return 'destacado';
+      if (s === 'destacado-hijo') return 'destacado-hijo';
+      if (s === 'apagado')       return 'apagado';
+      if (s === 'esperando')     return 'esperando-nodo';
+      if (s === 'terminado')     return 'terminado-nodo';
+      return '';
+    }
+
+    // ==========================================
+    // renderizado de cada tipo de paso
+    // ==========================================
+
+    function renderArbol(paso) {
+      limpiar();
+      let html = '';
+      paso.n.forEach((nd, i) => {
+        if (i > 0) html += '<div class="conector"></div>';
+        html += nodoHTML(nombres[nd.id], pids[nd.id], mapEstado(nd.s));
+      });
+      colC.innerHTML = html;
+    }
+
+    function renderCod1(paso, idx) {
+      limpiar();
+
+      // arbol central: init, bash, proceso
+      let arbol = '';
+      arbol += nodoHTML('init', 1, 'apagado');
+      arbol += '<div class="conector"></div>';
+      arbol += nodoHTML('bash', 500, 'apagado');
+      arbol += '<div class="conector"></div>';
+      arbol += nodoHTML('./procesos', 1000, mapEstado(paso.ps), 'nodo-proc');
+      colC.innerHTML = arbol;
+
+      // globo unico a la izquierda
+      colI.innerHTML = globoHTML('p-unico', 'Proceso (PID 1000)', 'padre-proc');
+      colD.innerHTML = '';
+
+      // llenar codigo
+      let prev = getEj(idx - 1);
+      let lins = CF.filter(l => l.r === 'comun');
+      llenar('p-unico-cod', 'p-unico-vars', lins, paso.ln, prev.c, [], paso.v, null);
+
+      // alinear globo con el nodo
+      requestAnimationFrame(() => alinearGlobo('p-unico', 'nodo-proc', 'col-izq', 'der'));
+    }
+
+    function renderCod2(paso, idx) {
+      limpiar();
+
+      // arbol central: init, bash, padre, hijo
+      let arbol = '';
+      arbol += nodoHTML('init', 1, 'apagado');
+      arbol += '<div class="conector"></div>';
+      arbol += nodoHTML('bash', 500, 'apagado');
+      arbol += '<div class="conector"></div>';
+      arbol += nodoHTML('./procesos (padre)', 1000, mapEstado(paso.pS), 'nodo-padre');
+      arbol += '<div class="conector"></div>';
+      arbol += nodoHTML('./procesos (hijo)', 1001, mapEstado(paso.hS), 'nodo-hijo');
+      colC.innerHTML = arbol;
+
+      // globo padre a la izquierda
+      let clsP = 'padre-proc';
+      if (['espera', 'hijo', 'hijo-fin'].includes(paso.q)) clsP += ' esperando';
+      if (paso.q === 'padre-fin') clsP += ' terminado';
+      colI.innerHTML = globoHTML('p-padre', 'Padre (PID 1000)', clsP);
+
+      // globo hijo a la derecha
+      let clsH = 'hijo-proc';
+      if (['hijo-fin', 'padre-vuelve', 'padre-fin'].includes(paso.q)) clsH += ' terminado';
+      colD.innerHTML = globoHTML('p-hijo', 'Hijo (PID 1001)', clsH);
+
+      // llenar codigo
+      let prev   = getEj(idx - 1);
+      let hijosN = CF.filter(l => l.r === 'hijo').map(l => l.n);
+      let padreN = CF.filter(l => l.r === 'padre').map(l => l.n);
+      let lP     = CF.filter(l => l.r === 'comun' || l.r === 'padre' || l.r === 'ambos');
+      let lH     = CF.filter(l => l.r === 'comun' || l.r === 'hijo'  || l.r === 'ambos');
+
+      llenar('p-padre-cod', 'p-padre-vars', lP, paso.lP, [...prev.c, ...prev.p], hijosN, paso.vP, paso.cP || null);
+      llenar('p-hijo-cod',  'p-hijo-vars',  lH, paso.lH, [...prev.c, ...prev.h], padreN, paso.vH, paso.cH || null);
+
+      // alinear globos con sus nodos
+      requestAnimationFrame(() => {
+        alinearGlobo('p-padre', 'nodo-padre', 'col-izq', 'der');
+        alinearGlobo('p-hijo',  'nodo-hijo',  'col-der',  'izq');
+      });
+    }
+
+    // ==========================================
+    // render principal
+    // ==========================================
+
+    function render(idx) {
+      let paso = pasos[idx];
+      info.textContent = 'Paso ' + (idx + 1) + '/' + pasos.length + ' \u2014 ' + paso.desc;
+
+      recalcSalidas(idx);
+      renderConsola();
+
+      if (paso.t === 'a')       renderArbol(paso);
+      else if (paso.t === 'c1') renderCod1(paso, idx);
+      else if (paso.t === 'c2') renderCod2(paso, idx);
+
+      btnAnt.disabled = (idx <= 0);
+      btnSig.disabled = (idx >= pasos.length - 1);
+    }
+
+    // ==========================================
+    // consola
+    // ==========================================
+
+    function recalcSalidas(idx) {
+      salidas = [];
+      for (let i = 0; i <= idx; i++) {
+        if (pasos[i].salida)  salidas.push(pasos[i].salida);
+        if (pasos[i].salida2) salidas.push(pasos[i].salida2);
+      }
+    }
+
+    function renderConsola() {
+      conSal.innerHTML = '';
+      salidas.forEach(s => {
+        conSal.innerHTML += '<div class="sl ' + s.clase + '">' + s.texto + '</div>';
+      });
+    }
+
+    // ==========================================
+    // auto-play
+    // ==========================================
+
+    let autoTimer  = null;
+    let autoActivo = false;
+
+    rangoVel.addEventListener('input', () => {
+      velTexto.textContent = (rangoVel.value / 1000).toFixed(1) + 's';
+      if (autoActivo) {
+        clearInterval(autoTimer);
+        autoTimer = setInterval(avAuto, +rangoVel.value);
+      }
+    });
+
+    function avAuto() {
+      if (pasoActual < pasos.length - 1) {
+        pasoActual++;
+        render(pasoActual);
+      } else {
+        detAuto();
+      }
+    }
+
+    function iniAuto() {
+      autoActivo = true;
+      btnAuto.textContent = '\u23F8 Pausa';
+      btnAuto.classList.add('activo');
+      if (pasoActual >= pasos.length - 1) {
+        pasoActual = -1;
+        salidas = [];
+        conSal.innerHTML = '';
+      }
+      avAuto();
+      autoTimer = setInterval(avAuto, +rangoVel.value);
+    }
+
+    function detAuto() {
+      autoActivo = false;
+      btnAuto.textContent = '\u25B6\u25B6 Auto';
+      btnAuto.classList.remove('activo');
+      if (autoTimer) {
+        clearInterval(autoTimer);
+        autoTimer = null;
+      }
+    }
+
+    btnAuto.addEventListener('click', () => {
+      autoActivo ? detAuto() : iniAuto();
+    });
+
+    // ==========================================
+    // controles MANUALES
+    // ==========================================
+
+    function av() {
+      if (pasoActual < pasos.length - 1) {
+        pasoActual++;
+        render(pasoActual);
+      }
+    }
+
+    function ret() {
+      if (pasoActual > 0) {
+        pasoActual--;
+        render(pasoActual);
+      }
+    }
+
+    btnSig.addEventListener('click', () => { detAuto(); av(); });
+    btnAnt.addEventListener('click', () => { detAuto(); ret(); });
+
+    btnReset.addEventListener('click', () => {
+      detAuto();
+      pasoActual = -1;
+      salidas = [];
+      conSal.innerHTML = '';
+      limpiar();
+      colI.style.paddingTop = '40px';
+      colD.style.paddingTop = '40px';
+      info.textContent = 'Pulsa "Siguiente" o "Auto" para comenzar.';
+      btnAnt.disabled = true;
+      btnSig.disabled = false;
+    });
+
+    // ==========================================
+    // teclado
+    // ==========================================
+
+    document.addEventListener('keydown', e => {
+      if (e.code === 'Space')      { e.preventDefault(); btnAuto.click(); }
+      if (e.code === 'ArrowRight') { detAuto(); av(); }
+      if (e.code === 'ArrowLeft')  { detAuto(); ret(); }
+      if (e.code === 'Escape')     { modal.classList.remove('visible'); }
+    });
+
+    // ==========================================
+    // modal: ver programa
+    // ==========================================
+
+    const modal = document.getElementById('modal-overlay');
+
+    document.getElementById('btn-ver').addEventListener('click', () => {
+      modal.classList.add('visible');
+    });
+
+    document.getElementById('modal-cerrar').addEventListener('click', () => {
+      modal.classList.remove('visible');
+    });
+
+    modal.addEventListener('click', e => {
+      if (e.target === modal) modal.classList.remove('visible');
+    });
+
+    // ==========================================
+    // inicio
+    // ==========================================
+
+    btnReset.click();
+  </script>
+
+</body>
+</html>
