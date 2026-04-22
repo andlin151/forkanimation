@@ -10,6 +10,68 @@
 
   <style>
     /* ========================================
+       variables de tema
+       ======================================== */
+
+    :root {
+      /* tema oscuro (Solarized Dark) */
+      --bg:           #002b36;
+      --bg-panel:     #073642;
+      --bg-inset:     #002b36;
+      --border:       #586e75;
+      --text:         #839496;
+      --text-strong:  #fdf6e3;
+      --text-dim:     #93a1a1;
+      --text-dimmer:  #657b83;
+      --text-meta:    #586e75;
+      --text-hidden:  #073642;
+      --padre:        #dc322f;
+      --padre-act:    #dc322f22;
+      --padre-shadow: #dc322f44;
+      --hijo:         #268bd2;
+      --hijo-act:     #268bd222;
+      --hijo-shadow:  #268bd244;
+      --accent:       #cb4b16;
+      --accent-hov:   #dc322f;
+      --activo:       #859900;
+      --alert:        #b58900;
+      --overlay:      #002b36dd;
+      --switch-bg:    #073642;
+      --switch-knob:  #fdf6e3;
+    }
+
+    body.claro {
+      /* tema claro optimizado para miopia:
+         - fondo crema (no blanco puro): reduce glare y fatiga visual
+         - texto casi negro sobre crema: maximo contraste legible
+         - acentos oscurecidos para no deslumbrar sobre fondo claro
+         - negrita en textos informativos para nitidez */
+      --bg:           #fdf6e3;
+      --bg-panel:     #eee8d5;
+      --bg-inset:     #fdf6e3;
+      --border:       #586e75;
+      --text:         #002b36;
+      --text-strong:  #000000;
+      --text-dim:     #073642;
+      --text-dimmer:  #586e75;
+      --text-meta:    #586e75;
+      --text-hidden:  #93a1a1;
+      --padre:        #a00000;
+      --padre-act:    #dc322f55;
+      --padre-shadow: #dc322f77;
+      --hijo:         #0a4d82;
+      --hijo-act:     #268bd255;
+      --hijo-shadow:  #268bd277;
+      --accent:       #a03800;
+      --accent-hov:   #a00000;
+      --activo:       #556b00;
+      --alert:        #805f00;
+      --overlay:      #002b36aa;
+      --switch-bg:    #93a1a1;
+      --switch-knob:  #002b36;
+    }
+
+    /* ========================================
        reset y base
        ======================================== */
 
@@ -21,16 +83,84 @@
 
     body {
       font-family: 'Ubuntu Mono', monospace;
-      background: #002b36;
-      color: #839496;
+      background: var(--bg);
+      color: var(--text);
       min-height: 100vh;
+      transition: background 0.3s, color 0.3s;
     }
 
     h1 {
       text-align: center;
       padding: 14px;
       font-size: 1.3em;
-      color: #cb4b16;
+      color: var(--accent);
+    }
+
+    /* ========================================
+       switch de tema (esquina superior derecha)
+       ======================================== */
+
+    #tema-switch {
+      position: fixed;
+      top: 12px;
+      right: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.85em;
+      color: var(--text-dim);
+      z-index: 300;
+      background: var(--bg);
+      padding: 5px 12px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+    }
+
+    .tema-lbl {
+      user-select: none;
+    }
+
+    .tema-lbl.on {
+      color: var(--accent);
+      font-weight: bold;
+    }
+
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 38px;
+      height: 20px;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      inset: 0;
+      background: var(--switch-bg);
+      border-radius: 20px;
+      transition: 0.3s;
+    }
+
+    .slider:before {
+      content: '';
+      position: absolute;
+      height: 14px;
+      width: 14px;
+      left: 3px;
+      top: 3px;
+      background: var(--switch-knob);
+      border-radius: 50%;
+      transition: 0.3s;
+    }
+
+    .switch input:checked + .slider:before {
+      transform: translateX(18px);
     }
 
     /* ========================================
@@ -42,13 +172,13 @@
       padding: 6px;
       position: sticky;
       top: 0;
-      background: #002b36;
+      background: var(--bg);
       z-index: 100;
-      border-bottom: 1px solid #073642;
+      border-bottom: 1px solid var(--bg-panel);
     }
 
     #controles button {
-      background: #cb4b16;
+      background: var(--accent);
       color: #fdf6e3;
       border: none;
       padding: 8px 20px;
@@ -57,28 +187,42 @@
       border-radius: 6px;
       cursor: pointer;
       font-family: inherit;
+      font-weight: bold;
     }
 
     #controles button:hover {
-      background: #dc322f;
+      background: var(--accent-hov);
     }
 
     #controles button:disabled {
-      background: #073642;
-      color: #586e75;
+      background: var(--bg-panel);
+      color: var(--text-meta);
       cursor: default;
     }
 
     #controles button.activo {
-      background: #859900;
+      background: var(--activo);
+    }
+
+    #controles button.btn-ver {
+      background: var(--hijo);
+    }
+
+    #controles button.btn-ver:hover {
+      background: var(--hijo);
+      filter: brightness(1.15);
     }
 
     #velocidad {
       display: inline-block;
       margin-left: 12px;
-      color: #586e75;
+      color: var(--text-meta);
       font-size: 0.82em;
       vertical-align: middle;
+    }
+
+    body.claro #velocidad {
+      color: var(--text);
     }
 
     #velocidad input {
@@ -88,22 +232,28 @@
     }
 
     #velocidad span {
-      color: #cb4b16;
+      color: var(--accent);
+      font-weight: bold;
     }
 
     #info-paso {
       text-align: center;
       padding: 10px 20px;
       font-size: 0.92em;
-      color: #93a1a1;
+      color: var(--text-dim);
       min-height: 2.4em;
       max-width: 820px;
       margin: 0 auto;
       line-height: 1.4;
     }
 
+    body.claro #info-paso {
+      color: var(--text);
+      font-weight: bold;
+    }
+
     /* ========================================
-       layout: globo izq | arbol centro | globo der
+       layout
        ======================================== */
 
     #escena {
@@ -137,12 +287,12 @@
     }
 
     /* ========================================
-       nodos del arbol (circulos)
+       nodos del arbol
        ======================================== */
 
     .nodo {
-      background: #073642;
-      border: 2px solid #586e75;
+      background: var(--bg-panel);
+      border: 2px solid var(--border);
       border-radius: 50%;
       padding: 12px 10px;
       text-align: center;
@@ -158,33 +308,41 @@
     .nodo .nn {
       font-weight: bold;
       font-size: 0.82em;
-      color: #93a1a1;
+      color: var(--text-dim);
       line-height: 1.2;
+    }
+
+    body.claro .nodo .nn {
+      color: var(--text);
     }
 
     .nodo .np {
       font-size: 0.7em;
-      color: #586e75;
+      color: var(--text-meta);
+    }
+
+    body.claro .nodo .np {
+      color: var(--text-dimmer);
     }
 
     .nodo.destacado {
-      border-color: #dc322f;
-      box-shadow: 0 0 14px #dc322f44;
+      border-color: var(--padre);
+      box-shadow: 0 0 14px var(--padre-shadow);
     }
 
     .nodo.destacado-hijo {
-      border-color: #268bd2;
-      box-shadow: 0 0 14px #268bd244;
+      border-color: var(--hijo);
+      box-shadow: 0 0 14px var(--hijo-shadow);
     }
 
-    .nodo.apagado       { opacity: 0.3; }
+    .nodo.apagado        { opacity: 0.3; }
     .nodo.esperando-nodo { opacity: 0.5; border-style: dashed; }
     .nodo.terminado-nodo { opacity: 0.25; border-style: dotted; }
 
     .conector {
       width: 2px;
       height: 22px;
-      background: #586e75;
+      background: var(--border);
     }
 
     /* ========================================
@@ -192,8 +350,8 @@
        ======================================== */
 
     .proceso {
-      background: #073642;
-      border: 2px solid #586e75;
+      background: var(--bg-panel);
+      border: 2px solid var(--border);
       border-radius: 18px;
       padding: 12px;
       width: 310px;
@@ -201,10 +359,8 @@
       transition: opacity 0.4s;
     }
 
-    .proceso.padre-proc { border-color: #dc322f; }
-    .proceso.hijo-proc  { border-color: #268bd2; }
-
-    /* colita (elemento real, posicionada con js) */
+    .proceso.padre-proc { border-color: var(--padre); }
+    .proceso.hijo-proc  { border-color: var(--hijo); }
 
     .colita {
       position: absolute;
@@ -216,44 +372,40 @@
       right: -16px;
       border-top: 12px solid transparent;
       border-bottom: 12px solid transparent;
-      border-left: 16px solid #dc322f;
+      border-left: 16px solid var(--padre);
     }
 
     .colita-der-inner {
       right: -11px;
       border-top: 10px solid transparent;
       border-bottom: 10px solid transparent;
-      border-left: 12px solid #073642;
+      border-left: 12px solid var(--bg-panel);
     }
 
     .colita-izq {
       left: -16px;
       border-top: 12px solid transparent;
       border-bottom: 12px solid transparent;
-      border-right: 16px solid #268bd2;
+      border-right: 16px solid var(--hijo);
     }
 
     .colita-izq-inner {
       left: -11px;
       border-top: 10px solid transparent;
       border-bottom: 10px solid transparent;
-      border-right: 12px solid #073642;
+      border-right: 12px solid var(--bg-panel);
     }
-
-    /* titulo del globo */
 
     .proceso-titulo {
       font-weight: bold;
       font-size: 0.95em;
       margin-bottom: 5px;
       padding-bottom: 4px;
-      border-bottom: 1px solid #586e75;
+      border-bottom: 1px solid var(--border);
     }
 
-    .padre-proc .proceso-titulo { color: #dc322f; }
-    .hijo-proc  .proceso-titulo { color: #268bd2; }
-
-    /* lineas de codigo dentro del globo */
+    .padre-proc .proceso-titulo { color: var(--padre); }
+    .hijo-proc  .proceso-titulo { color: var(--hijo); }
 
     .linea-codigo {
       padding: 2px 6px;
@@ -261,51 +413,59 @@
       border-radius: 4px;
       font-size: 0.75em;
       white-space: pre;
-      color: #586e75;
+      color: var(--text-meta);
       line-height: 1.45;
     }
 
+    body.claro .linea-codigo {
+      color: var(--text-dimmer);
+    }
+
     .linea-codigo.activa {
-      background: #dc322f22;
-      color: #fdf6e3;
+      background: var(--padre-act);
+      color: var(--text-strong);
       font-weight: bold;
     }
 
     .hijo-proc .linea-codigo.activa {
-      background: #268bd222;
+      background: var(--hijo-act);
     }
 
     .linea-codigo.ejecutada {
-      color: #657b83;
+      color: var(--text-dimmer);
+    }
+
+    body.claro .linea-codigo.ejecutada {
+      color: var(--text-meta);
     }
 
     .linea-codigo.no-aplica {
-      color: #073642;
+      color: var(--text-hidden);
       text-decoration: line-through;
     }
-
-    /* variables */
 
     .variables {
       margin-top: 6px;
       padding: 6px 8px;
-      background: #002b36;
+      background: var(--bg-inset);
       border-radius: 6px;
       font-size: 0.78em;
     }
 
+    body.claro .variables {
+      border: 1px solid var(--border);
+    }
+
     .variables .tv {
-      color: #586e75;
+      color: var(--text-meta);
       font-size: 0.72em;
       margin-bottom: 2px;
     }
 
     .vv.cambiado {
-      color: #b58900;
+      color: var(--alert);
       font-weight: bold;
     }
-
-    /* estados del globo */
 
     .proceso.esperando {
       opacity: 0.4;
@@ -314,7 +474,7 @@
     .proceso.esperando .proceso-titulo::after {
       content: ' zzz';
       font-size: 0.7em;
-      color: #586e75;
+      color: var(--text-meta);
     }
 
     .proceso.terminado {
@@ -324,7 +484,7 @@
     .proceso.terminado .proceso-titulo::after {
       content: ' [fin]';
       font-size: 0.7em;
-      color: #586e75;
+      color: var(--text-meta);
     }
 
     /* ========================================
@@ -335,15 +495,15 @@
       max-width: 740px;
       width: 90%;
       margin: 10px auto 24px;
-      background: #073642;
-      border: 1px solid #586e75;
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
       border-radius: 8px;
       padding: 10px 14px;
       min-height: 50px;
     }
 
     .tc {
-      color: #586e75;
+      color: var(--text-meta);
       font-size: 0.75em;
       margin-bottom: 4px;
     }
@@ -354,10 +514,18 @@
       animation: fadeIn 0.3s ease;
     }
 
-    .padre-out { color: #dc322f; }
-    .hijo-out  { color: #268bd2; }
-    .comun-out { color: #93a1a1; }
-    .shell-out { color: #859900; }
+    .padre-out { color: var(--padre); }
+    .hijo-out  { color: var(--hijo); }
+    .comun-out { color: var(--text-dim); }
+    .shell-out { color: var(--activo); }
+
+    body.claro .padre-out,
+    body.claro .hijo-out,
+    body.claro .shell-out {
+      font-weight: bold;
+    }
+
+    body.claro .comun-out { color: var(--text); font-weight: bold; }
 
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(-3px); }
@@ -365,7 +533,7 @@
     }
 
     /* ========================================
-       modal (ver programa)
+       modal
        ======================================== */
 
     #modal-overlay {
@@ -375,8 +543,8 @@
       left: 0;
       width: 100%;
       height: 100%;
-      background: #002b36dd;
-      z-index: 200;
+      background: var(--overlay);
+      z-index: 250;
       justify-content: center;
       align-items: center;
     }
@@ -386,8 +554,8 @@
     }
 
     #modal-box {
-      background: #073642;
-      border: 2px solid #586e75;
+      background: var(--bg-panel);
+      border: 2px solid var(--border);
       border-radius: 12px;
       padding: 20px 24px;
       max-width: 680px;
@@ -398,23 +566,29 @@
     }
 
     #modal-box h2 {
-      color: #b58900;
+      color: var(--alert);
       font-size: 1.1em;
       margin-bottom: 12px;
     }
 
     #modal-box pre {
-      color: #93a1a1;
+      color: var(--text-dim);
       font-size: 0.88em;
       line-height: 1.6;
       white-space: pre;
       overflow-x: auto;
     }
 
-    #modal-box .linea-padre { color: #dc322f; }
-    #modal-box .linea-hijo  { color: #268bd2; }
-    #modal-box .linea-comun { color: #93a1a1; }
-    #modal-box .linea-incl  { color: #586e75; }
+    body.claro #modal-box pre {
+      color: var(--text);
+    }
+
+    #modal-box .linea-padre { color: var(--padre); }
+    #modal-box .linea-hijo  { color: var(--hijo); }
+    #modal-box .linea-comun { color: var(--text-dim); }
+    #modal-box .linea-incl  { color: var(--text-meta); }
+
+    body.claro #modal-box .linea-comun { color: var(--text); }
 
     #modal-cerrar {
       position: absolute;
@@ -422,19 +596,32 @@
       right: 14px;
       background: none;
       border: none;
-      color: #586e75;
+      color: var(--text-meta);
       font-size: 1.4em;
       cursor: pointer;
       font-family: inherit;
     }
 
     #modal-cerrar:hover {
-      color: #93a1a1;
+      color: var(--text-dim);
     }
   </style>
 </head>
 
 <body>
+
+  <!-- ========================================
+       SWITCH de tema (esquina superior derecha)
+       ======================================== -->
+
+  <div id="tema-switch" title="Cambiar tema">
+    <span class="tema-lbl on" id="tema-lbl-oscuro">Oscuro</span>
+    <label class="switch">
+      <input type="checkbox" id="tema-check">
+      <span class="slider"></span>
+    </label>
+    <span class="tema-lbl" id="tema-lbl-claro">Claro</span>
+  </div>
 
   <!-- ========================================
        CABECERA Y controles
@@ -447,7 +634,7 @@
     <button id="btn-sig">Siguiente &#9654;</button>
     <button id="btn-reset">Reiniciar</button>
     <button id="btn-auto">&#9654;&#9654; Auto</button>
-    <button id="btn-ver" style="background:#268bd2">Ver programa</button>
+    <button id="btn-ver" class="btn-ver">Ver programa</button>
     <div id="velocidad">
       <input type="range" id="rango-vel" min="500" max="4000" value="2000" step="250">
       <span id="vel-texto">2.0s</span>
@@ -734,18 +921,15 @@
       let escenaTop = escena.getBoundingClientRect().top;
       let nodoCentroY = nodo.getBoundingClientRect().top + nodo.offsetHeight / 2 - escenaTop;
 
-      // alinear la columna para que la colita (a 40px del top) coincida con el nodo
       let pt = nodoCentroY - 52;
       if (pt < 0) pt = 0;
       col.style.paddingTop = pt + 'px';
 
-      // colita exterior
       let c1 = document.createElement('div');
       c1.className = 'colita colita-' + lado;
       c1.style.top = '40px';
       globo.appendChild(c1);
 
-      // colita interior (relleno)
       let c2 = document.createElement('div');
       c2.className = 'colita colita-' + lado + '-inner';
       c2.style.top = '42px';
@@ -824,7 +1008,6 @@
     function renderCod1(paso, idx) {
       limpiar();
 
-      // arbol central: init, bash, proceso
       let arbol = '';
       arbol += nodoHTML('init', 1, 'apagado');
       arbol += '<div class="conector"></div>';
@@ -833,23 +1016,19 @@
       arbol += nodoHTML('./procesos', 1000, mapEstado(paso.ps), 'nodo-proc');
       colC.innerHTML = arbol;
 
-      // globo unico a la izquierda
       colI.innerHTML = globoHTML('p-unico', 'Proceso (PID 1000)', 'padre-proc');
       colD.innerHTML = '';
 
-      // llenar codigo
       let prev = getEj(idx - 1);
       let lins = CF.filter(l => l.r === 'comun');
       llenar('p-unico-cod', 'p-unico-vars', lins, paso.ln, prev.c, [], paso.v, null);
 
-      // alinear globo con el nodo
       requestAnimationFrame(() => alinearGlobo('p-unico', 'nodo-proc', 'col-izq', 'der'));
     }
 
     function renderCod2(paso, idx) {
       limpiar();
 
-      // arbol central: init, bash, padre, hijo
       let arbol = '';
       arbol += nodoHTML('init', 1, 'apagado');
       arbol += '<div class="conector"></div>';
@@ -860,18 +1039,15 @@
       arbol += nodoHTML('./procesos (hijo)', 1001, mapEstado(paso.hS), 'nodo-hijo');
       colC.innerHTML = arbol;
 
-      // globo padre a la izquierda
       let clsP = 'padre-proc';
       if (['espera', 'hijo', 'hijo-fin'].includes(paso.q)) clsP += ' esperando';
       if (paso.q === 'padre-fin') clsP += ' terminado';
       colI.innerHTML = globoHTML('p-padre', 'Padre (PID 1000)', clsP);
 
-      // globo hijo a la derecha
       let clsH = 'hijo-proc';
       if (['hijo-fin', 'padre-vuelve', 'padre-fin'].includes(paso.q)) clsH += ' terminado';
       colD.innerHTML = globoHTML('p-hijo', 'Hijo (PID 1001)', clsH);
 
-      // llenar codigo
       let prev   = getEj(idx - 1);
       let hijosN = CF.filter(l => l.r === 'hijo').map(l => l.n);
       let padreN = CF.filter(l => l.r === 'padre').map(l => l.n);
@@ -881,7 +1057,6 @@
       llenar('p-padre-cod', 'p-padre-vars', lP, paso.lP, [...prev.c, ...prev.p], hijosN, paso.vP, paso.cP || null);
       llenar('p-hijo-cod',  'p-hijo-vars',  lH, paso.lH, [...prev.c, ...prev.h], padreN, paso.vH, paso.cH || null);
 
-      // alinear globos con sus nodos
       requestAnimationFrame(() => {
         alinearGlobo('p-padre', 'nodo-padre', 'col-izq', 'der');
         alinearGlobo('p-hijo',  'nodo-hijo',  'col-der',  'izq');
@@ -894,7 +1069,7 @@
 
     function render(idx) {
       let paso = pasos[idx];
-      info.textContent = 'Paso ' + (idx + 1) + '/' + pasos.length + ' \u2014 ' + paso.desc;
+      info.textContent = 'Paso ' + (idx + 1) + '/' + pasos.length + ' — ' + paso.desc;
 
       recalcSalidas(idx);
       renderConsola();
@@ -952,7 +1127,7 @@
 
     function iniAuto() {
       autoActivo = true;
-      btnAuto.textContent = '\u23F8 Pausa';
+      btnAuto.textContent = '⏸ Pausa';
       btnAuto.classList.add('activo');
       if (pasoActual >= pasos.length - 1) {
         pasoActual = -1;
@@ -965,7 +1140,7 @@
 
     function detAuto() {
       autoActivo = false;
-      btnAuto.textContent = '\u25B6\u25B6 Auto';
+      btnAuto.textContent = '▶▶ Auto';
       btnAuto.classList.remove('activo');
       if (autoTimer) {
         clearInterval(autoTimer);
@@ -1039,6 +1214,30 @@
     modal.addEventListener('click', e => {
       if (e.target === modal) modal.classList.remove('visible');
     });
+
+    // ==========================================
+    // switch de tema (oscuro / claro)
+    // ==========================================
+
+    const temaCheck = document.getElementById('tema-check');
+    const lblOscuro = document.getElementById('tema-lbl-oscuro');
+    const lblClaro  = document.getElementById('tema-lbl-claro');
+
+    function aplicarTema(claro) {
+      document.body.classList.toggle('claro', claro);
+      temaCheck.checked = claro;
+      lblOscuro.classList.toggle('on', !claro);
+      lblClaro.classList.toggle('on', claro);
+      try { localStorage.setItem('tema', claro ? 'claro' : 'oscuro'); } catch (e) {}
+    }
+
+    temaCheck.addEventListener('change', () => aplicarTema(temaCheck.checked));
+
+    (function initTema() {
+      let guardado = null;
+      try { guardado = localStorage.getItem('tema'); } catch (e) {}
+      aplicarTema(guardado === 'claro');
+    })();
 
     // ==========================================
     // inicio
